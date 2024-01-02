@@ -1,4 +1,5 @@
 const express = require('express'); 
+var bodyParser = require('body-parser');
 const app = express();
 const port = 3000;
 
@@ -8,7 +9,8 @@ function middleware1(req, res, next){
     next();
 }
 
-app.use(middleware1);
+// app.use(middleware1);
+app.use(bodyParser.json());
 
 
 function calculateSum(counter) {
@@ -22,9 +24,10 @@ function calculateSum(counter) {
 
 
 function handleFirstRequest(req,res) {
+    console.log(req.body);
     // var counter = req.query.counter;            // get data(counter) from queries.
-    console.log(req.headers);                       
-    var counter = req.headers.counter;             // get data(counter) in the form of headers. 
+    //console.log(req.headers);                      // get data(counter) in the form of headers.  
+    var counter = req.body.counter;             
     var calculatedSum = calculateSum(counter);
     // console.log(calculatedSum);
     var answer = "The Sum is " + calculatedSum;
