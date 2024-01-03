@@ -20,6 +20,47 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const app = express();
+const port = 3000;
+
+
+
+const directoryPath = './files';
+
+app.get('/files', (req, res) => {
+  fs.readdir(directoryPath, (err, files) => {
+    if (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Error reading directory' });
+    } else {
+      const textFiles = files.filter(file => path.extname(file) === '.txt');
+      res.json(textFiles);
+    }
+  });
+
+});
+
+app.get('/files/:fileName', (req, res) => {
+  const fileName = req.params.fileName;
+  const filePath = path.join(directoryPath, fileName);
+
+  fs.readFile(filePath, 'utf8', (err, fileContent) => {
+    if (err) {
+      console.error(err);
+      if (err.code === 'ENOENT') {
+        res.status(404).json({ error: 'File not found' });
+      } else {
+        res.status(500).json({ error: 'Error reading file' });
+      }
+    } else {
+      res.json({ content: fileContent });
+    }
+  });
+});
+
+app.listen(port, () => {
+  console.log(`Example app listening on port ${port}`)
+})
+
 
 
 module.exports = app;
