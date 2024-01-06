@@ -108,11 +108,11 @@ app.get('/users/purchasedCourses', userAuthentication, (req, res) => {
   // const purchasedCourses = COURSES.filter(c => req.user.purchasedCourses.includes(c.id));
   // We need to extract the complete course object from COURSES
   // which have ids which are present in req.user.purchasedCourses
-  var purchasedCourseIds = req.user.purchasedCourses; [1, 4];
-  var purchasedCourses = [];
+  var purchasedCourseIds = req.user.purchasedCourses[1, 4];
+  var pc = [];
   for (let i = 0; i<COURSES.length; i++) {
     if (purchasedCourseIds.indexOf(COURSES[i].id) !== -1) {
-      purchasedCourses.push(COURSES[i]);
+      pc.push(COURSES[i]);
     }
   }
 
