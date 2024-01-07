@@ -1,11 +1,40 @@
 const express = require('express');
+const jwt = require('jsonwebtoken');
 const app = express();
+
 
 app.use(express.json());
 
 let ADMINS = [];
 let USERS = [];
 let COURSES = [];
+
+const secretKey = "superS3cr3t1"; // replace this with your own secret key
+
+const generateJwt = (user) => {
+  const payload = { username: user.username, };
+  return jwt.sign(payload, secretKey, { expiresIn: '1h' });
+};
+
+const authenticateJwt = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+
+  if (authHeader) {
+    const token = authHeader.split(' ')[1];
+
+    jwt.verify(token, secretKey, (err, user) => {
+      if (err) {
+        return res.sendStatus(403);
+      }
+
+      req.user = user;
+      next();
+    });
+  } else {
+    res.sendStatus(401);
+  }
+};
+
 
 const adminAuthentication = (req, res, next) => {
   const { username, password } = req.headers;
@@ -40,11 +69,11 @@ app.post('/admin/signup', (req, res) => {
   }
 });
 
-app.post('/admin/login', adminAuthentication, (req, res) => {
+app.post('/admin/login',  (req, res) => {
   res.json({ message: 'Logged in successfully' });
 });
 
-app.post('/admin/courses', adminAuthentication, (req, res) => {
+app.post('/admin/courses', authenticateJwt, (req, res) => {
   const course = req.body;
 
   course.id = Date.now(); // use timestamp as course ID
@@ -52,7 +81,7 @@ app.post('/admin/courses', adminAuthentication, (req, res) => {
   res.json({ message: 'Course created successfully', courseId: course.id });
 });
 
-app.put('/admin/courses/:courseId', adminAuthentication, (req, res) => {
+app.put('/admin/courses/:courseId', authenticateJwt, (req, res) => {
   const courseId = parseInt(req.params.courseId);
   const course = COURSES.find(c => c.id === courseId);
   if (course) {
@@ -63,7 +92,7 @@ app.put('/admin/courses/:courseId', adminAuthentication, (req, res) => {
   }
 });
 
-app.get('/admin/courses', adminAuthentication, (req, res) => {
+app.get('/admin/courses', authenticateJwt, (req, res) => {
   res.json({ courses: COURSES });
 });
 
@@ -78,11 +107,11 @@ app.post('/users/signup', (req, res) => {
   res.json({ message: 'User created successfully' });
 });
 
-app.post('/users/login', userAuthentication, (req, res) => {
+app.post('/users/login',  (req, res) => {
   res.json({ message: 'Logged in successfully' });
 });
 
-app.get('/users/courses', userAuthentication, (req, res) => {
+app.get('/users/courses', authenticateJwt, (req, res) => {
   // COURSES.filter(c => c.published)
   let filteredCourses = [];
   for (let i = 0; i<COURSES.length; i++) {
@@ -93,7 +122,7 @@ app.get('/users/courses', userAuthentication, (req, res) => {
   res.json({ courses: filteredCourses });
 });
 
-app.post('/users/courses/:courseId', userAuthentication, (req, res) => {
+app.post('/users/courses/:courseId', authenticateJwt, (req, res) => {
   const courseId = Number(req.params.courseId);
   const course = COURSES.find(c => c.id === courseId && c.published);
   if (course) {
@@ -104,7 +133,7 @@ app.post('/users/courses/:courseId', userAuthentication, (req, res) => {
   }
 });
 
-app.get('/users/purchasedCourses', userAuthentication, (req, res) => {
+app.get('/users/purchasedCourses', authenticateJwt, (req, res) => {
   // const purchasedCourses = COURSES.filter(c => req.user.purchasedCourses.includes(c.id));
   // We need to extract the complete course object from COURSES
   // which have ids which are present in req.user.purchasedCourses

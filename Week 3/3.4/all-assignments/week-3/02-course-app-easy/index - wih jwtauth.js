@@ -1,4 +1,5 @@
 const express = require('express');
+const jwt = require('jsonwebtoken');
 const app = express();
 const port = 3000;
 
@@ -7,6 +8,32 @@ app.use(express.json());
 let ADMINS = [];
 let USERS = [];
 let COURSES = [];
+
+const secretKey = "superS3cr3t1"; // replace this with your own secret key
+
+const generateJwt = (user) => {
+  const payload = { username: user.username, };
+  return jwt.sign(payload, secretKey, { expiresIn: '1h' });
+};
+
+const authenticateJwt = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+
+  if (authHeader) {
+    const token = authHeader.split(' ')[1];
+
+    jwt.verify(token, secretKey, (err, user) => {
+      if (err) {
+        return res.sendStatus(403);
+      }
+
+      req.user = user;
+      next();
+    });
+  } else {
+    res.sendStatus(401);
+  }
+};
 
 // Admin routes
 app.post('/admin/signup', (req, res) => {
@@ -28,7 +55,8 @@ app.post('/admin/signup', (req, res) => {
   // Create the new admin object and push it to the array
   const newAdmin = { username, password};
   ADMINS.push(newAdmin);
-  res.json({ message: 'Admin created successfully' });
+  const token = generateJwt(newAdmin);
+  res.json({ message: 'Admin created successfully', token});
 
 } catch (error) {
   console.error(error);
@@ -39,7 +67,7 @@ app.post('/admin/signup', (req, res) => {
 app.post('/admin/login', (req, res) => {
   // logic to log in admin
   try {
-    const { username, password } = req.body;
+    const { username, password } = req.headers;
 
     // Validate input (e.g., check for empty fields)
     if (!username || !password) {
@@ -59,7 +87,8 @@ app.post('/admin/login', (req, res) => {
     }
 
     // Successful login
-    res.json({ message: 'Admin logged in successfully' });
+    const token = generateJwt(admin);
+    res.json({ message: 'Admin logged in successfully', token });
 
   } catch (error) {
     console.error(error);
@@ -81,7 +110,7 @@ const adminauth = (req, res, next) => {
   }
 };
 
-app.post('/admin/courses', adminauth, (req, res) => {
+app.post('/admin/courses', authenticateJwt, (req, res) => {
   try {
     
     const { title, description, price, imageLink, published } = req.body;
@@ -111,7 +140,7 @@ app.post('/admin/courses', adminauth, (req, res) => {
 
 });
 
-app.put('/admin/courses/:courseId', adminauth, (req, res) => {
+app.put('/admin/courses/:courseId', authenticateJwt, (req, res) => {
   // logic to edit a course
   try {
 
@@ -147,7 +176,7 @@ app.put('/admin/courses/:courseId', adminauth, (req, res) => {
   }
 });
 
-app.get('/admin/courses', adminauth, (req, res) => {
+app.get('/admin/courses', authenticateJwt, (req, res) => {
   // logic to get all courses
   try {
     const courses = COURSES.filter(course => course.published); // Only return published courses
@@ -180,7 +209,8 @@ app.post('/users/signup', (req, res) => {
     // Create the new admin object and push it to the array
     const newUser = { username, password};
     USERS.push(newUser);
-    res.json({ message: 'User created successfully' });
+    const token = generateJwt(newUser);
+    res.json({ message: 'User created successfully', token });
   
   } catch (error) {
     console.error(error);
@@ -211,7 +241,8 @@ app.post('/users/login', (req, res) => {
     }
 
     // Successful login
-    res.json({ message: 'User logged in successfully' });
+    const token = generateJwt(user);
+    res.json({ message: 'User logged in successfully' ,token});
 
   } catch (error) {
     console.error(error);
@@ -230,7 +261,7 @@ const userauth = (req, res, next) => {
     res.status(401).json({ message: 'User authentication failed' });
   }
 };
-app.get('/users/courses', userauth, (req, res) => {
+app.get('/users/courses', authenticateJwt, (req, res) => {
   // logic to list all courses
   // logic to get all courses
   try {
@@ -243,7 +274,7 @@ app.get('/users/courses', userauth, (req, res) => {
   }
 });
 
-app.post('/users/courses/:courseId', userauth,  (req, res) => {
+app.post('/users/courses/:courseId', authenticateJwt,  (req, res) => {
 
   const { username, password } = req.headers;
 
@@ -266,7 +297,7 @@ app.post('/users/courses/:courseId', userauth,  (req, res) => {
 
 });
 
-app.get('/users/purchasedCourses', userauth ,(req, res) => {
+app.get('/users/purchasedCourses', authenticateJwt ,(req, res) => {
 
   const { username, password } = req.headers;
 
