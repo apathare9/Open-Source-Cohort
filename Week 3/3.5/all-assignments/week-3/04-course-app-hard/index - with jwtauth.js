@@ -261,8 +261,8 @@ app.post('/users/signup', async (req, res) => {
     // Create the new admin object and push it to the array
     const newUser =  new User({ username, password });
     await newUser.save();
-    const token = generateJwt(newUser);
-    // const token = jwt.sign({ username, role: 'user' }, SECRET, { expiresIn: '1h' });
+    // const token = generateJwt(newUser);
+    const token = jwt.sign({ username, role: 'user' }, SECRET, { expiresIn: '1h' });
     res.json({ message: 'User created successfully', token });
   
   } catch (error) {
@@ -271,7 +271,7 @@ app.post('/users/signup', async (req, res) => {
   }
 });
 
-app.post('/users/login', (req, res) => {
+app.post('/users/login', async(req, res) => {
   // logic to log in user
   try {
     const { username, password } = req.headers;
@@ -282,7 +282,7 @@ app.post('/users/login', (req, res) => {
     }
 
     // Find the admin with the matching username
-    const user = USERS.find(user => user.username === username);
+    const user = await User.findOne({ username, password });
 
     if (!user) {
       return res.status(401).json({ message: 'Invalid username or password' });
@@ -294,7 +294,7 @@ app.post('/users/login', (req, res) => {
     }
 
     // Successful login
-    const token = generateJwt(user);
+    const token = jwt.sign({ username, role: 'user' }, SECRET, { expiresIn: '1h' });
     res.json({ message: 'User logged in successfully' ,token});
 
   } catch (error) {
@@ -314,11 +314,11 @@ const userauth = (req, res, next) => {
     res.status(401).json({ message: 'User authentication failed' });
   }
 };
-app.get('/users/courses', authenticateJwt, (req, res) => {
+app.get('/users/courses', authenticateJwt, async(req, res) => {
   // logic to list all courses
   // logic to get all courses
   try {
-    const courses = COURSES.filter(course => course.published); // Only return published courses
+    const courses = await Course.find({published: true});
 
     res.json(courses);
   } catch (error) {
@@ -327,19 +327,17 @@ app.get('/users/courses', authenticateJwt, (req, res) => {
   }
 });
 
-app.post('/users/courses/:courseId', authenticateJwt,  (req, res) => {
+app.post('/users/courses/:courseId', authenticateJwt,  async(req, res) => {
 
-  const { username, password } = req.headers;
-
-  const courseId = parseInt(req.params.courseId);
-  const course = COURSES.find(c => c.id === courseId);
+  try {
+    
+  const course = await Course.findById(req.params.courseId);
+  console.log(course);
   if (course) {
-    const user = USERS.find(u => u.username === username);
+    const user = await User.findOne({ username: req.user.username });
     if (user) {
-      if (!user.purchasedCourses) {
-        user.purchasedCourses = [];
-      }
       user.purchasedCourses.push(course);
+      await user.save();
       res.json({ message: 'Course purchased successfully' });
     } else {
       res.status(403).json({ message: 'User not found' });
@@ -348,17 +346,26 @@ app.post('/users/courses/:courseId', authenticateJwt,  (req, res) => {
     res.status(404).json({ message: 'Course not found' });
   }
 
+
+
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+
+
 });
 
-app.get('/users/purchasedCourses', authenticateJwt ,(req, res) => {
+app.get('/users/purchasedCourses', authenticateJwt ,async(req, res) => {
 
   const { username, password } = req.headers;
 
-  const user = USERS.find(u => u.username === username);
-  if (user && user.purchasedCourses) {
-    res.json({ purchasedCourses: user.purchasedCourses });
+  const user = await User.findOne({ username: req.user.username }).populate('purchasedCourses');
+  if (user) {
+    res.json({ purchasedCourses: user.purchasedCourses || [] });
   } else {
-    res.status(404).json({ message: 'No courses purchased' });
+    res.status(403).json({ message: 'User not found' });
   }
 
 
