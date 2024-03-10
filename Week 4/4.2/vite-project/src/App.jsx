@@ -1,30 +1,48 @@
 /* eslint-disable react/prop-types */
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import "./App.css";
 
+function useTodos() {
+  const [todos, setTodos] = useState([]);
+
+  useEffect(() => {
+    fetch("http://localhost:3000/todos", {
+      method: "GET",
+    }).then((response) => {
+      response.json().then((data) => {
+        console.log(data);
+        setTodos(data);
+      });
+    });
+
+    setInterval(() => {
+      fetch("http://localhost:3000/todos", {
+        method: "GET",
+      }).then((response) => {
+        response.json().then((data) => {
+          console.log(data);
+          setTodos(data);
+        });
+      });
+    });
+  }, []);
+
+  return todos;
+}
+
 function App() {
-  const [todos, setTodos] = useState([
-    {
-      title: "Go to Gym",
-      description: "Hit Gym from 5-7",
-      id: 1,
-    },
-    {
-      title: "Go to class",
-      description: "Hit Gym from 7-9",
-      id: 2,
-    },
-  ]);
+  const todos = useTodos();
 
   return (
     <div>
       {todos.map((todo) => {
         return (
-          <Todo
-            key={todo.id}
-            title={todo.title}
-            description={todo.description}
-          ></Todo>
+          <div key={todo.id}>
+            {todo.title}
+            {todo.description}
+            <button>Delete</button>
+            <br />
+          </div>
         );
       })}
     </div>
