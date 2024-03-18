@@ -1,6 +1,6 @@
 "use strict";
-function calculateSum(a, b) {
+function calculateeSum(a, b) {
     return a + b;
 }
-var ans = calculateSum(2, 3);
+var ans = calculateeSum(2, 3);
 console.log(ans);
